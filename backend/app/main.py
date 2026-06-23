@@ -1,6 +1,7 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.auth.dependencies import CurrentUser, get_current_user
 from app.config import settings
 
 app = FastAPI(title="Document Research Assistant API")
@@ -17,6 +18,11 @@ app.add_middleware(
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/me")
+async def me(current_user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+    return current_user
 
 
 if __name__ == "__main__":
