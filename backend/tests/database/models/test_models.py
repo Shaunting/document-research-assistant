@@ -39,11 +39,19 @@ def test_source_document_columns():
     from app.database.models.source_documents import SourceDocument
     cols = {c.key for c in sa_inspect(SourceDocument).mapper.column_attrs}
     expected = {
-        "id", "ticker", "company", "filing_type", "filing_date",
-        "year", "accession_number", "source_url", "content_markdown",
+        "id", "title", "authors", "year", "filename", "source_path",
+        "content_markdown", "content_hash", "tags",
         "created_at", "updated_at",
     }
     assert cols == expected
+
+
+def test_source_document_filename_is_unique():
+    from app.database.models.source_documents import SourceDocument
+    constraints = {
+        c.name for c in SourceDocument.__table__.constraints if c.name
+    }
+    assert "source_documents_filename_key" in constraints
 
 
 def test_source_document_id_has_default():
