@@ -29,9 +29,14 @@ dependencies = [
 add-bounds = "exact"
 exclude-newer = "7 days"
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+markers = ["integration: live Supabase/OpenAI (skipped in CI default suite)"]
+
 [dependency-groups]
 dev = [
     "ipykernel==7.3.0",
     "pytest==9.1.0",
+    "pytest-asyncio==1.4.0",
     "ruff==0.15.17",
 ]
