@@ -1,11 +1,12 @@
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport, type UIMessage } from 'ai'
 import { useEffect, useMemo, useState } from 'react'
-import { useOutletContext, useParams } from 'react-router-dom'
+import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
 
 import { ChatInput } from '@/components/chat/chat-input'
 import { MessageList } from '@/components/chat/message-list'
 import { StreamingIndicator } from '@/components/chat/streaming-indicator'
+import { useAuth } from '@/hooks/use-auth'
 import { api } from '@/lib/api'
 import { toUIMessages } from '@/lib/chat-messages'
 import { env } from '@/lib/env'
@@ -27,12 +28,9 @@ export function ChatThreadPage() {
     )
   }
 
+  // Remounting resets loaded history and useChat state when the route changes.
   return (
-    <ActiveThread
-      key={threadId}
-      threadId={threadId}
-      onThreadMutated={onThreadMutated}
-    />
+    <ActiveThread key={threadId} threadId={threadId} onThreadMutated={onThreadMutated} />
   )
 }
 
@@ -101,10 +99,21 @@ function ThreadChat({
   initialMessages: UIMessage[]
   onThreadMutated: () => Promise<void>
 }) {
+  const navigate = useNavigate()
+  const { signOut } = useAuth()
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: `${env.apiBaseUrl}/chat/stream`,
+        fetch: async (input, init) => {
+          const response = await globalThis.fetch(input, init)
+          // The SDK reduces non-OK responses to Error(response.text()), so status is only available here.
+          if (response.status === 401) {
+            await signOut()
+            navigate('/login', { replace: true })
+          }
+          return response
+        },
         headers: async () => {
           const token = await http.getAccessToken()
           if (!token) throw new Error('Not authenticated')
@@ -117,7 +126,7 @@ function ThreadChat({
           },
         }),
       }),
-    [threadId],
+    [navigate, signOut, threadId],
   )
 
   const { messages, sendMessage, status, error } = useChat({
@@ -140,7 +149,7 @@ function ThreadChat({
         <div className="mx-auto mb-2 flex w-full max-w-2xl flex-col gap-2">
           <StreamingIndicator status={status} />
           {error ? (
-            <p className="text-sm text-destructive">{error.message}</p>
+            <p className="text-sm text-destructive">{getChatErrorMessage(error)}</p>
           ) : null}
         </div>
         <ChatInput
@@ -152,4 +161,21 @@ function ThreadChat({
       </div>
     </div>
   )
+}
+
+function getChatErrorMessage(error: Error) {
+  try {
+    const payload: unknown = JSON.parse(error.message)
+    if (
+      typeof payload === 'object' &&
+      payload !== null &&
+      'detail' in payload &&
+      typeof payload.detail === 'string'
+    ) {
+      return payload.detail
+    }
+    return 'Chat request failed'
+  } catch {
+    return error.message || 'Chat request failed'
+  }
 }

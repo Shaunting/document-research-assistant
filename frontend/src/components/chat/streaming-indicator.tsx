@@ -1,5 +1,7 @@
+import type { ChatStatus } from 'ai'
+
 type StreamingIndicatorProps = {
-  status: 'submitted' | 'streaming' | 'ready' | 'error'
+  status: ChatStatus
 }
 
 export function StreamingIndicator({ status }: StreamingIndicatorProps) {

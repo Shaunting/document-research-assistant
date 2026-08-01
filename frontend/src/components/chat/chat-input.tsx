@@ -15,13 +15,14 @@ export function ChatInput({ disabled, onSend }: ChatInputProps) {
     event.preventDefault()
     const trimmed = text.trim()
     if (!trimmed || disabled) return
-    setText('')
     await onSend(trimmed)
+    setText('')
   }
 
   return (
     <form className="mx-auto flex w-full max-w-2xl gap-2" onSubmit={(e) => void handleSubmit(e)}>
       <Textarea
+        aria-label="Message"
         value={text}
         onChange={(event) => setText(event.target.value)}
         placeholder="Ask about the research corpus…"

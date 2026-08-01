@@ -49,7 +49,7 @@ export const api = {
   listMessages(threadId: string) {
     return http.request<ChatMessageDto[]>(
       'GET',
-      `/chat/threads/${threadId}/messages`,
+      `/chat/threads/${encodeURIComponent(threadId)}/messages`,
     )
   },
 }

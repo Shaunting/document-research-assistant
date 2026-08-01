@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Outlet, useNavigate, useParams } from 'react-router-dom'
+import { Outlet, useMatch, useNavigate } from 'react-router-dom'
 
 import { ThreadSidebar } from '@/components/chat/thread-sidebar'
 import { useAuth } from '@/hooks/use-auth'
@@ -12,7 +12,7 @@ export type ChatOutletContext = {
 
 export function ChatPage() {
   const navigate = useNavigate()
-  const { threadId } = useParams()
+  const threadMatch = useMatch('/chat/:threadId')
   const { signOut } = useAuth()
   const [threads, setThreads] = useState<ChatThread[]>([])
   const [loading, setLoading] = useState(true)
@@ -54,7 +54,7 @@ export function ChatPage() {
     <div className="flex min-h-svh w-full">
       <ThreadSidebar
         threads={threads}
-        activeThreadId={threadId}
+        activeThreadId={threadMatch?.params.threadId}
         loading={loading}
         error={error}
         creating={creating}
