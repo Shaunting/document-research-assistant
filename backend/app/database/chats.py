@@ -69,6 +69,11 @@ async def resolve_thread_for_user(
 ) -> ThreadSummary:
     row = await _fetch_thread_row(user_client, thread_id)
     if row is not None:
+        if row["user_id"] != str(user_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not allowed to access this thread",
+            )
         return _parse_thread_row(row)
 
     admin_row = await _fetch_thread_row(admin_client, thread_id)

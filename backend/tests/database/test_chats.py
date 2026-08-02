@@ -7,7 +7,15 @@ from fastapi import HTTPException
 
 from app.auth.dependencies import CurrentUser
 from app.database import chats as chats_module
-from app.database.chats import ThreadSummary, resolve_thread_for_user
+from app.database.chats import (
+    create_thread,
+    derive_thread_title,
+    insert_message,
+    list_messages,
+    list_threads,
+    resolve_thread_for_user,
+    touch_thread,
+)
 
 
 @pytest.mark.asyncio
@@ -104,6 +112,33 @@ async def test_resolve_thread_raises_404_when_missing():
 
 
 @pytest.mark.asyncio
+async def test_resolve_thread_raises_403_when_user_client_row_belongs_to_other_user():
+    # This case isn't reachable under real RLS (the user-scoped client should
+    # never be able to read another user's row), but it proves the explicit
+    # user_id comparison in resolve_thread_for_user is an independent guard
+    # rather than relying solely on RLS being correctly configured.
+    thread_id = uuid.uuid4()
+    owner_id = uuid.uuid4()
+    requester_id = uuid.uuid4()
+    user_client = MagicMock()
+    user_table = MagicMock()
+    user_client.table.return_value = user_table
+    user_table.select.return_value.eq.return_value.maybe_single.return_value.execute = _as_execute(
+        _thread_row(thread_id, owner_id)
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await resolve_thread_for_user(
+            user_client=user_client,
+            admin_client=MagicMock(),
+            thread_id=thread_id,
+            user_id=requester_id,
+        )
+    assert exc.value.status_code == 403
+    assert exc.value.detail == "Not allowed to access this thread"
+
+
+@pytest.mark.asyncio
 async def test_resolve_thread_raises_403_for_other_users_thread():
     thread_id = uuid.uuid4()
     owner_id = uuid.uuid4()
@@ -142,16 +177,6 @@ def _message_row(message_id: uuid.UUID, thread_id: uuid.UUID) -> dict:
         "created_at": now,
         "updated_at": now,
     }
-
-
-from app.database.chats import (
-    create_thread,
-    derive_thread_title,
-    insert_message,
-    list_messages,
-    list_threads,
-    touch_thread,
-)
 
 
 @pytest.mark.asyncio

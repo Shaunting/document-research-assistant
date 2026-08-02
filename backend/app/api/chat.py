@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -26,6 +26,8 @@ from app.database.chats import (
     touch_thread,
 )
 from app.database.supabase import create_service_role_client
+
+logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -130,21 +132,28 @@ async def stream_route(
             completed = True
         finally:
             if completed:
-                await insert_message(
-                    user_client,
-                    body.thread_id,
-                    "user",
-                    user_text,
-                    message_json=user_json,
-                )
-                await insert_message(
-                    user_client,
-                    body.thread_id,
-                    "assistant",
-                    STUB_ASSISTANT_TEXT,
-                    message_json=assistant_json,
-                )
-                await touch_thread(user_client, body.thread_id, title=title_update)
+                try:
+                    await insert_message(
+                        user_client,
+                        body.thread_id,
+                        "user",
+                        user_text,
+                        message_json=user_json,
+                    )
+                    await insert_message(
+                        user_client,
+                        body.thread_id,
+                        "assistant",
+                        STUB_ASSISTANT_TEXT,
+                        message_json=assistant_json,
+                    )
+                    await touch_thread(user_client, body.thread_id, title=title_update)
+                except Exception as exc:
+                    logger.error(
+                        "chat_turn_persistence_failed",
+                        thread_id=str(body.thread_id),
+                        error=str(exc),
+                    )
 
     return StreamingResponse(
         generate(),

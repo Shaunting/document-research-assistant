@@ -6,7 +6,7 @@ import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from app.database.chats import MessageSummary, ThreadSummary
+from app.database.chats import ThreadSummary
 from app.main import app
 
 
