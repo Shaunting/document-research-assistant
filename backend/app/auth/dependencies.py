@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from supabase import AsyncClient
 from supabase_auth.errors import AuthApiError
 
 from app.database.supabase import create_user_client
@@ -56,3 +57,15 @@ async def get_current_user(
         )
 
     return await verify_access_token(credentials.credentials)
+
+
+async def get_user_supabase_client(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+) -> AsyncClient:
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing authorization credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return await create_user_client(credentials.credentials)
