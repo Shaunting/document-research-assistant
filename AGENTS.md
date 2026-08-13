@@ -72,4 +72,5 @@ Fail fast on startup if required config is missing. No silent fallbacks that hid
 
 - Answer and write plans that are simple to understand. 
 - Don't commit without me
-- Specs and ADRs go to Notion first for comments and approval before work starts. Once approved, implementation plans stay as plain git-tracked markdown (not round-tripped through Notion), since execution checks off their steps directly. 
+- Specs, ADRs, and implementation plans go to Notion first for comments and approval before work starts. The local markdown copy (`docs/superpowers/specs/`, `docs/superpowers/plans/`) is the working copy execution checks off against; Notion is where review and comments happen.
+- Don't run `git commit` unattended. Each task's commit step is a pause point: show the diff, wait for explicit go-ahead, then commit. One commit per task.
