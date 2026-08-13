@@ -1,0 +1,24 @@
+import hashlib
+from pathlib import Path
+
+from app.ingest.schemas import ParsedDocument
+
+
+def hash_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _cache_path(content_hash: str, cache_dir: Path) -> Path:
+    return cache_dir / f"{content_hash}.json"
+
+
+def load_cached(content_hash: str, cache_dir: Path) -> ParsedDocument | None:
+    path = _cache_path(content_hash, cache_dir)
+    if not path.exists():
+        return None
+    return ParsedDocument.model_validate_json(path.read_text())
+
+
+def write_cache(content_hash: str, parsed: ParsedDocument, cache_dir: Path) -> None:
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    _cache_path(content_hash, cache_dir).write_text(parsed.model_dump_json())
