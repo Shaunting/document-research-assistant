@@ -65,3 +65,11 @@ Fail fast on startup if required config is missing. No silent fallbacks that hid
 - **No feature flags** added speculatively.
 - **Comments:** explain *why* when non-obvious, never *what*. Remove stale TODOs.
 - **Keep files focused.** Prefer small modules.
+- main functions should be on top of helper functions
+- Code should be easy to read (Follow clean code)
+
+## When completing tickets with AI 
+
+- Answer and write plans that are simple to understand. 
+- Don't commit without me
+- Specs and ADRs go to Notion first for comments and approval before work starts. Once approved, implementation plans stay as plain git-tracked markdown (not round-tripped through Notion), since execution checks off their steps directly. 
