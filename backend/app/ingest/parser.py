@@ -1,4 +1,7 @@
 # backend/app/ingest/parser.py
+from pathlib import Path
+
+from docling.document_converter import DocumentConverter
 from docling_core.types.doc.document import (
     DoclingDocument,
     PictureItem,
@@ -7,7 +10,20 @@ from docling_core.types.doc.document import (
     TextItem,
 )
 
+from app.ingest.cache import hash_file, load_cached, write_cache
 from app.ingest.schemas import Block, ChunkType, ParsedDocument
+
+
+def parse_pdf(pdf_path: Path, cache_dir: Path) -> ParsedDocument:
+    content_hash = hash_file(pdf_path)
+    cached = load_cached(content_hash, cache_dir=cache_dir)
+    if cached is not None:
+        return cached
+
+    result = DocumentConverter().convert(str(pdf_path))
+    parsed = normalize(result.document)
+    write_cache(content_hash, parsed, cache_dir=cache_dir)
+    return parsed
 
 
 def normalize(doc: DoclingDocument) -> ParsedDocument:

@@ -10,11 +10,12 @@ excluded from the default (fast) test run.
 """
 
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from docling.document_converter import DocumentConverter
 
-from app.ingest.parser import normalize
+from app.ingest.parser import normalize, parse_pdf
 from app.ingest.schemas import ChunkType
 
 FIXTURE_PDF = Path(__file__).parents[3] / "data" / "papers" / "auto_score.pdf"
@@ -69,3 +70,31 @@ def test_normalize_merges_picture_caption_into_surrounding_text(parsed_fixture):
 def test_normalize_page_range_is_within_document_bounds(parsed_fixture):
     for block in parsed_fixture.blocks:
         assert 1 <= block.page_start <= block.page_end <= 19
+
+
+@pytest.mark.integration
+def test_parse_pdf_writes_and_reuses_cache(tmp_path: Path):
+    cache_dir = tmp_path / "parsed"
+
+    first = parse_pdf(FIXTURE_PDF, cache_dir=cache_dir)
+    content_hash_files = list(cache_dir.glob("*.json"))
+    assert len(content_hash_files) == 1
+
+    with patch("app.ingest.parser.DocumentConverter") as mock_converter:
+        second = parse_pdf(FIXTURE_PDF, cache_dir=cache_dir)
+
+    mock_converter.assert_not_called()
+    assert second == first
+
+
+@pytest.mark.integration
+def test_parse_pdf_does_not_cache_on_conversion_failure(tmp_path: Path):
+    cache_dir = tmp_path / "parsed"
+    bad_pdf = tmp_path / "not_a_real.pdf"
+    bad_pdf.write_bytes(b"not a pdf")
+
+    with pytest.raises(Exception):
+        parse_pdf(bad_pdf, cache_dir=cache_dir)
+
+    if cache_dir.exists():
+        assert list(cache_dir.glob("*.json")) == []
