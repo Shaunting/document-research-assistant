@@ -42,8 +42,8 @@ backend/
 │   ├── retrieval/       # pgvector/full-text queries, RRF fusion, source passage lookup
 │   ├── grounding/       # citation validation and answer grounding checks
 │   ├── database/        # SQLAlchemy models, Supabase client wrapper, typed query helpers
+│   ├── ingest/          # PDF parsing (Docling), chunking, embedding — lives in app/ so it's reachable from a future upload endpoint, not just offline scripts
 │   └── prompts/         # prompt/instruction templates if not colocated with assistant
-├── ingest/              # one-off ingestion scripts (Markdown extraction, chunking, embedding, Supabase writes)
 ├── tests/
 └── pyproject.toml
 ```
