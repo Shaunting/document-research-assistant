@@ -18,6 +18,7 @@ build/
 
 # Node / Next.js
 node_modules/
+.pnpm-store/
 .turbo/
 *.tsbuildinfo
 npm-debug.log*
@@ -39,3 +40,8 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+
+# docs
+docs/superpowers/
+docs/todos.md

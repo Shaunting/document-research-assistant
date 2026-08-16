@@ -1,6 +1,9 @@
-from fastapi import Depends, FastAPI
+import httpx
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
+from app.api.chat import router as chat_router
 from app.auth.dependencies import CurrentUser, get_current_user
 from app.config import settings
 
@@ -13,6 +16,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(chat_router)
+
+
+@app.exception_handler(httpx.ConnectError)
+@app.exception_handler(httpx.ConnectTimeout)
+@app.exception_handler(httpx.ReadTimeout)
+async def upstream_unreachable_handler(request: Request, exc: Exception) -> JSONResponse:
+    return JSONResponse(
+        status_code=502,
+        content={"detail": "Upstream service unreachable"},
+    )
 
 
 @app.get("/health")

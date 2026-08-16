@@ -1,0 +1,70 @@
+{
+  "source": "local",
+  "documents": [
+    {
+      "filename": "Estevez_2026_AgentScore.pdf",
+      "title": "Automatic Construction of Clinical Scoring Systems with LLM Agents",
+      "authors": [
+        "Silas Ruhrberg Estevez",
+        "Christopher Chiu",
+        "Mihaela van der Schaar"
+      ],
+      "year": 2026,
+      "venue": "ICML 2026",
+      "arxiv_id": "2601.22324",
+      "tags": [
+        "clinical-scoring",
+        "llm-agents",
+        "interpretable-ml",
+        "mimic-iv",
+        "eicu"
+      ]
+    },
+    {
+      "filename": "Feng_human_ai_co_design.pdf",
+      "title": "Human-AI Co-design for Clinical Prediction Models",
+      "authors": [
+        "Jean Feng",
+        "Avni Kothari",
+        "Patrick Vossler",
+        "Andrew Bishara",
+        "Lucas Zier",
+        "Newton Addo",
+        "Aaron Kornblith",
+        "Yan Shuo Tan",
+        "Chandan Singh"
+      ],
+      "year": 2026,
+      "venue": "arXiv preprint",
+      "arxiv_id": "2601.09072",
+      "tags": [
+        "human-in-the-loop",
+        "clinical-prediction",
+        "concept-bottleneck",
+        "hachi",
+        "ehr"
+      ]
+    },
+    {
+      "filename": "auto_score.pdf",
+      "title": "AutoScore: A Machine Learning–Based Automatic Clinical Score Generator and Its Application to Mortality Prediction Using Electronic Health Records",
+      "authors": [
+        "Feng Xie",
+        "Bibhas Chakraborty",
+        "Marcus Eng Hock Ong",
+        "Benjamin Alan Goldstein",
+        "Nan Liu"
+      ],
+      "year": 2020,
+      "venue": "JMIR Medical Informatics",
+      "doi": "10.2196/21798",
+      "tags": [
+        "clinical-scoring",
+        "mortality-prediction",
+        "autosc-score",
+        "ehr",
+        "interpretable-ml"
+      ]
+    }
+  ]
+}
