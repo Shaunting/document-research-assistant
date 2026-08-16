@@ -50,4 +50,3 @@ def test_write_cache_creates_cache_dir_if_missing(tmp_path: Path):
     write_cache("deadbeef", _sample_doc(), cache_dir=cache_dir)
 
     assert (cache_dir / "deadbeef.json").exists()
-

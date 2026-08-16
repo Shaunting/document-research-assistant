@@ -3,6 +3,7 @@ from pathlib import Path
 
 from docling.document_converter import DocumentConverter
 from docling_core.types.doc.document import (
+    DocItem,
     DoclingDocument,
     PictureItem,
     SectionHeaderItem,
@@ -52,11 +53,18 @@ def normalize(doc: DoclingDocument) -> ParsedDocument:
         current_page_start = None
         current_page_end = None
 
+    table_caption_refs = {ref.cref for table in doc.tables for ref in table.captions}
+
     for item, _tree_level in doc.iterate_items(traverse_pictures=True):
+        if item.self_ref in table_caption_refs:
+            continue
+
         if isinstance(item, SectionHeaderItem):
             flush_text_block()
             heading_stack = {
-                level: text for level, text in heading_stack.items() if level < item.level
+                level: text
+                for level, text in heading_stack.items()
+                if level < item.level
             }
             heading_stack[item.level] = item.text
             continue
@@ -76,22 +84,20 @@ def normalize(doc: DoclingDocument) -> ParsedDocument:
             continue
 
         if isinstance(item, PictureItem):
-            caption = _resolve_caption_text(item, doc)
-            if caption:
-                current_text_parts.append(caption)
-                page_start, page_end = _page_range(item)
-                current_page_start = min(filter(None, [current_page_start, page_start]))
-                current_page_end = max(filter(None, [current_page_end, page_end]))
             continue
 
         if isinstance(item, TextItem):
             page_start, page_end = _page_range(item)
             current_text_parts.append(item.text)
             current_page_start = (
-                page_start if current_page_start is None else min(current_page_start, page_start)
+                page_start
+                if current_page_start is None
+                else min(current_page_start, page_start)
             )
             current_page_end = (
-                page_end if current_page_end is None else max(current_page_end, page_end)
+                page_end
+                if current_page_end is None
+                else max(current_page_end, page_end)
             )
 
     flush_text_block()
@@ -103,12 +109,6 @@ def normalize(doc: DoclingDocument) -> ParsedDocument:
     )
 
 
-def _page_range(item) -> tuple[int, int]:
+def _page_range(item: DocItem) -> tuple[int, int]:
     pages = [p.page_no for p in item.prov]
     return min(pages), max(pages)
-
-
-def _resolve_caption_text(item, doc: DoclingDocument) -> str | None:
-    if not item.captions:
-        return None
-    return item.captions[0].resolve(doc).text

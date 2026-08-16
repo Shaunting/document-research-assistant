@@ -26,7 +26,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-ingest = ["docling==2.118.0"]
+ingest = ["docling==2.118.0", "docling-core==2.91.0"]
 
 [tool.uv]
 add-bounds = "exact"
@@ -34,7 +34,9 @@ exclude-newer = "7 days"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-markers = ["integration: live Supabase/OpenAI (skipped in CI default suite)"]
+markers = [
+    "integration: live external services (Supabase/OpenAI) or slow local inference (Docling) - skipped in CI default suite",
+]
 
 [dependency-groups]
 dev = [

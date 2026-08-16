@@ -14,11 +14,13 @@ from unittest.mock import patch
 
 import pytest
 from docling.document_converter import DocumentConverter
+from docling_core.types.doc.document import DoclingDocument
 
 from app.ingest.parser import normalize, parse_pdf
 from app.ingest.schemas import ChunkType
 
 FIXTURE_PDF = Path(__file__).parents[3] / "data" / "papers" / "auto_score.pdf"
+FIXTURE_DOCLING_JSON = Path(__file__).parent / "fixtures" / "auto_score_docling.json"
 
 
 @pytest.fixture(scope="module")
@@ -54,16 +56,51 @@ def test_normalize_builds_section_path_from_headings(parsed_fixture):
 def test_normalize_table_block_includes_caption_and_markdown_table(parsed_fixture):
     table_blocks = [b for b in parsed_fixture.blocks if b.block_type == ChunkType.TABLE]
     assert len(table_blocks) == 6
-    described_cohort = [b for b in table_blocks if "Description of the study cohort" in b.text]
+    described_cohort = [
+        b for b in table_blocks if "Description of the study cohort" in b.text
+    ]
     assert len(described_cohort) == 1
     assert "|" in described_cohort[0].text
 
 
 @pytest.mark.integration
 def test_normalize_merges_picture_caption_into_surrounding_text(parsed_fixture):
-    matches = [b for b in parsed_fixture.blocks if "Flowchart of the AutoScore framework" in b.text]
+    matches = [
+        b
+        for b in parsed_fixture.blocks
+        if "Flowchart of the AutoScore framework" in b.text
+    ]
     assert len(matches) == 1
     assert matches[0].block_type == ChunkType.TEXT
+    assert matches[0].text.count("Flowchart of the AutoScore framework") == 1
+
+
+@pytest.mark.integration
+def test_normalize_does_not_leak_table_caption_into_text_block(parsed_fixture):
+    text_blocks = [b for b in parsed_fixture.blocks if b.block_type == ChunkType.TEXT]
+    assert all(
+        "Table 1. Description of the study cohort" not in b.text for b in text_blocks
+    )
+
+
+def test_normalize_does_not_duplicate_picture_captions():
+    """Regression test for caption duplication bugs, run against a
+    pre-serialized DoclingDocument fixture so it stays in the fast suite
+    (no live Docling conversion, no model loading).
+    """
+    doc = DoclingDocument.model_validate_json(FIXTURE_DOCLING_JSON.read_text())
+    parsed = normalize(doc)
+
+    matches = [
+        b for b in parsed.blocks if "Flowchart of the AutoScore framework" in b.text
+    ]
+    assert len(matches) == 1
+    assert matches[0].text.count("Flowchart of the AutoScore framework") == 1
+
+    text_blocks = [b for b in parsed.blocks if b.block_type == ChunkType.TEXT]
+    assert all(
+        "Table 1. Description of the study cohort" not in b.text for b in text_blocks
+    )
 
 
 @pytest.mark.integration

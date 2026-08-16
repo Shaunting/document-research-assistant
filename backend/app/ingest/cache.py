@@ -21,4 +21,7 @@ def load_cached(content_hash: str, cache_dir: Path) -> ParsedDocument | None:
 
 def write_cache(content_hash: str, parsed: ParsedDocument, cache_dir: Path) -> None:
     cache_dir.mkdir(parents=True, exist_ok=True)
-    _cache_path(content_hash, cache_dir).write_text(parsed.model_dump_json())
+    final_path = _cache_path(content_hash, cache_dir)
+    tmp_path = final_path.with_suffix(".json.tmp")
+    tmp_path.write_text(parsed.model_dump_json())
+    tmp_path.replace(final_path)
