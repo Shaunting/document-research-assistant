@@ -104,6 +104,52 @@ def test_document_chunk_fk_to_source_documents():
     assert "source_documents" in fk_tables
 
 
+def test_document_chunk_columns():
+    from app.database.models.document_chunks import DocumentChunk
+    cols = {c.key for c in sa_inspect(DocumentChunk).mapper.column_attrs}
+    expected = {
+        "id", "document_id", "chunk_index", "text", "token_count",
+        "page_start", "page_end", "section_path", "chunk_type",
+        "embedding", "search_vector", "metadata_",
+        "created_at", "updated_at",
+    }
+    assert cols == expected
+
+
+def test_document_chunk_chunk_type_defaults_to_text():
+    from app.database.models.document_chunks import ChunkType, DocumentChunk
+    assert DocumentChunk.__table__.c["chunk_type"].default.arg == ChunkType.TEXT
+
+
+def test_document_chunk_page_start_and_page_end_not_nullable():
+    from app.database.models.document_chunks import DocumentChunk
+    assert DocumentChunk.__table__.c["page_start"].nullable is False
+    assert DocumentChunk.__table__.c["page_end"].nullable is False
+
+
+def test_document_chunk_section_path_nullable():
+    from app.database.models.document_chunks import DocumentChunk
+    assert DocumentChunk.__table__.c["section_path"].nullable is True
+
+
+def test_document_chunk_document_index_unique_constraint():
+    from app.database.models.document_chunks import DocumentChunk
+    constraints = {c.name for c in DocumentChunk.__table__.constraints if c.name}
+    assert "document_chunks_document_index_unique" in constraints
+
+
+def test_document_chunk_page_range_check_constraint():
+    from app.database.models.document_chunks import DocumentChunk
+    constraints = {c.name for c in DocumentChunk.__table__.constraints if c.name}
+    assert "document_chunks_page_range_valid" in constraints
+
+
+def test_document_chunk_fk_ondelete_cascade():
+    from app.database.models.document_chunks import DocumentChunk
+    (fk,) = DocumentChunk.__table__.c["document_id"].foreign_keys
+    assert fk.ondelete == "CASCADE"
+
+
 def test_chat_thread_table_name():
     from app.database.models.chat_threads import ChatThread
     assert ChatThread.__tablename__ == "chat_threads"
