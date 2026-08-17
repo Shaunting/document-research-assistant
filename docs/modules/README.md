@@ -4,7 +4,8 @@ Quick "what's in here" notes per code module, written so someone who doesn't wan
 
 ## Index
 
-- [ingest.md](ingest.md) — `backend/app/ingest/`, PDF parsing into page-aware blocks
+- [parsing.md](parsing.md) — `backend/app/ingestion/parsing/`, PDF parsing into page-aware blocks
+- [chunking.md](chunking.md) — `backend/app/ingestion/chunking/`, blocks into sized, section-aware chunks
 
 ## How to write one of these
 

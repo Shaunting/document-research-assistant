@@ -1,6 +1,6 @@
 # ingest
 
-`backend/app/ingest/` — turns a PDF into a structured JSON file describing its content, page by page and section by section. This is step one of the pipeline: nothing here does chunking, embedding, or search — it just turns a messy PDF into clean, labeled data that later steps can work with.
+`backend/app/ingestion/parsing/` — turns a PDF into a structured JSON file describing its content, page by page and section by section. This is step one of the pipeline: nothing here does chunking, embedding, or search — it just turns a messy PDF into clean, labeled data that later steps can work with.
 
 ## The process, end to end
 
@@ -61,9 +61,9 @@ Docling parsing is slow (it's doing real layout analysis, not just text extracti
 
 ## Files
 
-- **parser.py** — `parse_pdf(pdf_path, cache_dir)` is the public entry point (steps 1-5 above). `normalize(doc)` does the Docling-tree-to-blocks walk.
-- **cache.py** — `hash_file`, `load_cached`, `write_cache`. Writes go through a `.tmp` file + atomic rename so a crash mid-write can't leave a corrupt cache entry.
-- **schemas.py** — the Pydantic models that define the JSON shape: `ChunkType` (`text`/`table`), `Block`, `ParsedDocument`.
+- **parser.py** (`app/ingestion/parsing/`) — `parse_pdf(pdf_path, cache_dir)` is the public entry point (steps 1-5 above). `normalize(doc)` does the Docling-tree-to-blocks walk.
+- **cache.py** (`app/ingestion/parsing/`) — `hash_file`, `load_cached`, `write_cache`. Writes go through a `.tmp` file + atomic rename so a crash mid-write can't leave a corrupt cache entry.
+- **schemas.py** (`app/ingestion/parsing/`) — the Pydantic models that define the JSON shape: `ChunkType` (`text`/`table`), `Block`, `ParsedDocument`.
 
 ## Where the output lives
 
