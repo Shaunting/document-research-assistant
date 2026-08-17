@@ -1,3 +1,4 @@
+import re
 from itertools import groupby
 
 import tiktoken
@@ -13,6 +14,43 @@ def _count_tokens(text: str, config: ChunkingConfig) -> int:
 
 def _group_by_section(blocks: list[Block]) -> list[list[Block]]:
     return [list(group) for _key, group in groupby(blocks, key=lambda b: b.section_path)]
+
+
+def _split_by_sentence(text: str) -> list[str]:
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    return sentences if len(sentences) > 1 else [text]
+
+
+def _split_oversized_block(block: Block, config: ChunkingConfig) -> list[Block]:
+    if _count_tokens(block.text, config) <= config.max_tokens:
+        return [block]
+
+    paragraphs = [p for p in block.text.split("\n\n") if p.strip()]
+    if len(paragraphs) > 1:
+        # Split on paragraph breaks; any single paragraph that's *still*
+        # oversized on its own falls back to sentence-boundary splitting
+        # just for that paragraph, not the whole block.
+        pieces: list[str] = []
+        for paragraph in paragraphs:
+            if _count_tokens(paragraph, config) <= config.max_tokens:
+                pieces.append(paragraph)
+            else:
+                pieces.extend(_split_by_sentence(paragraph))
+    else:
+        # Single oversized paragraph: fall back to sentence-boundary splitting directly.
+        pieces = _split_by_sentence(block.text)
+
+    return [
+        Block(
+            text=piece,
+            block_type=block.block_type,
+            page_start=block.page_start,
+            page_end=block.page_end,
+            section_path=block.section_path,
+        )
+        for piece in pieces
+        if piece.strip()
+    ]
 
 
 def _pack_text_run(blocks: list[Block], config: ChunkingConfig) -> list[list[Block]]:
@@ -39,8 +77,9 @@ def _pack_text_run(blocks: list[Block], config: ChunkingConfig) -> list[list[Blo
 
 
 def _blocks_to_chunk(blocks: list[Block], config: ChunkingConfig) -> Chunk:
-    text = "\n\n".join(b.text for b in blocks)
+    content = "\n\n".join(b.text for b in blocks)
     section_path = blocks[0].section_path
+    text = f"{section_path}\n\n{content}" if section_path else content
     page_start = min(b.page_start for b in blocks)
     page_end = max(b.page_end for b in blocks)
     return Chunk(
@@ -81,7 +120,7 @@ def chunk_document(parsed: ParsedDocument, config: ChunkingConfig = ChunkingConf
                     )
                 )
             else:
-                text_blocks.append(block)
+                text_blocks.extend(_split_oversized_block(block, config))
         if text_blocks:
             for group in _pack_text_run(text_blocks, config):
                 chunks.append(_blocks_to_chunk(group, config))

@@ -128,3 +128,96 @@ def test_long_section_packs_into_multiple_chunks():
     assert all(c.section_path == "Methods" for c in chunks)
     for c in chunks:
         assert c.token_count <= config.max_tokens
+
+
+def test_oversized_block_splits_on_paragraph_boundary():
+    config = ChunkingConfig(target_tokens=10, max_tokens=15)
+    # NOTE: fixture calibrated against the real tokenizer -- the brief's
+    # original "* 10" repeat makes each paragraph 20 tokens on its own,
+    # already over max_tokens=15, which would force a sentence-level
+    # fallback split instead of the clean paragraph-boundary split this
+    # test wants to exercise. "* 4" gives each paragraph 8 tokens (10 with
+    # the section breadcrumb), comfortably under max_tokens, while the
+    # combined block (17 tokens) still exceeds max_tokens and triggers the
+    # split.
+    long_block = _text_block(
+        ("first paragraph " * 4).strip() + "\n\n" + ("second paragraph " * 4).strip(),
+        section_path="Methods",
+    )
+    parsed = ParsedDocument(markdown="", page_count=1, blocks=[long_block])
+    chunks = chunk_document(parsed, config)
+    assert len(chunks) == 2
+    for c in chunks:
+        assert c.token_count <= config.max_tokens
+
+
+def test_paragraph_still_oversized_after_split_falls_back_to_sentences():
+    config = ChunkingConfig(target_tokens=10, max_tokens=15)
+    short_paragraph = "Short one."
+    long_paragraph = "This is a sentence. " * 10 + "Final sentence here."
+    long_block = _text_block(
+        short_paragraph + "\n\n" + long_paragraph, section_path="Methods"
+    )
+    parsed = ParsedDocument(markdown="", page_count=1, blocks=[long_block])
+    chunks = chunk_document(parsed, config)
+    assert len(chunks) >= 3  # short paragraph + at least 2 sentence-split pieces
+    for c in chunks:
+        assert c.token_count <= config.max_tokens
+    all_text = " ".join(c.text for c in chunks)
+    assert "Short one." in all_text
+    assert "Final sentence here." in all_text
+
+
+def test_chunk_document_raises_on_empty_blocks():
+    parsed = ParsedDocument(markdown="", page_count=1, blocks=[])
+    with pytest.raises(ValueError):
+        chunk_document(parsed)
+
+
+def test_breadcrumb_is_prepended_when_section_path_present():
+    parsed = ParsedDocument(
+        markdown="",
+        page_count=1,
+        blocks=[_text_block("body text", section_path="Methods", page=1)],
+    )
+    chunks = chunk_document(parsed)
+    assert chunks[0].text == "Methods\n\nbody text"
+
+
+def test_no_breadcrumb_line_when_section_path_is_empty():
+    parsed = ParsedDocument(
+        markdown="",
+        page_count=1,
+        blocks=[_text_block("preamble text", section_path="", page=1)],
+    )
+    chunks = chunk_document(parsed)
+    assert chunks[0].text == "preamble text"
+
+
+def test_chunk_index_is_sequential_across_whole_document():
+    parsed = ParsedDocument(
+        markdown="",
+        page_count=1,
+        blocks=[
+            _text_block("a", section_path="Abstract", page=1),
+            _text_block("b", section_path="Introduction", page=1),
+            _table_block("| x |", section_path="Introduction", page=1),
+        ],
+    )
+    chunks = chunk_document(parsed)
+    assert [c.chunk_index for c in chunks] == list(range(len(chunks)))
+
+
+def test_chunk_page_range_is_min_max_across_packed_blocks():
+    parsed = ParsedDocument(
+        markdown="",
+        page_count=1,
+        blocks=[
+            _text_block("a", section_path="Methods", page=3),
+            _text_block("b", section_path="Methods", page=4),
+        ],
+    )
+    chunks = chunk_document(parsed)
+    assert len(chunks) == 1
+    assert chunks[0].page_start == 3
+    assert chunks[0].page_end == 4
