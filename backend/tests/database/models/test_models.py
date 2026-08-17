@@ -121,6 +121,11 @@ def test_document_chunk_chunk_type_defaults_to_text():
     assert DocumentChunk.__table__.c["chunk_type"].default.arg == ChunkType.TEXT
 
 
+def test_document_chunk_chunk_type_persists_lowercase_values():
+    from app.database.models.document_chunks import DocumentChunk
+    assert list(DocumentChunk.__table__.c["chunk_type"].type.enums) == ["text", "table"]
+
+
 def test_document_chunk_page_start_and_page_end_not_nullable():
     from app.database.models.document_chunks import DocumentChunk
     assert DocumentChunk.__table__.c["page_start"].nullable is False
@@ -215,6 +220,12 @@ def test_message_citation_fk_to_document_chunks():
         for fk in MessageCitation.__table__.c["chunk_id"].foreign_keys
     }
     assert "document_chunks" in fk_tables
+
+
+def test_message_citation_fk_ondelete_cascade():
+    from app.database.models.message_citations import MessageCitation
+    (fk,) = MessageCitation.__table__.c["chunk_id"].foreign_keys
+    assert fk.ondelete == "CASCADE"
 
 
 def test_package_exports_all_models():

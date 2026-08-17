@@ -17,6 +17,8 @@ class MessageCitation(TimestampMixin, Base):
         UUID(as_uuid=True), ForeignKey("chat_messages.id"), nullable=False
     )
     chunk_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("document_chunks.id"), nullable=False
+        UUID(as_uuid=True),
+        ForeignKey("document_chunks.id", ondelete="CASCADE"),
+        nullable=False,
     )
     quote: Mapped[str] = mapped_column(Text, nullable=False)
