@@ -16,10 +16,10 @@ import pytest
 from docling.document_converter import DocumentConverter
 from docling_core.types.doc.document import DoclingDocument
 
-from app.ingest.parser import normalize, parse_pdf
-from app.ingest.schemas import ChunkType
+from app.ingestion.parsing.parser import normalize, parse_pdf
+from app.ingestion.parsing.schemas import ChunkType
 
-FIXTURE_PDF = Path(__file__).parents[3] / "data" / "papers" / "auto_score.pdf"
+FIXTURE_PDF = Path(__file__).parents[4] / "data" / "papers" / "auto_score.pdf"
 FIXTURE_DOCLING_JSON = Path(__file__).parent / "fixtures" / "auto_score_docling.json"
 
 
@@ -117,7 +117,7 @@ def test_parse_pdf_writes_and_reuses_cache(tmp_path: Path):
     content_hash_files = list(cache_dir.glob("*.json"))
     assert len(content_hash_files) == 1
 
-    with patch("app.ingest.parser.DocumentConverter") as mock_converter:
+    with patch("app.ingestion.parsing.parser.DocumentConverter") as mock_converter:
         second = parse_pdf(FIXTURE_PDF, cache_dir=cache_dir)
 
     mock_converter.assert_not_called()

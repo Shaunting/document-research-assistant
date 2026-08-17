@@ -11,8 +11,8 @@ from docling_core.types.doc.document import (
     TextItem,
 )
 
-from app.ingest.cache import hash_file, load_cached, write_cache
-from app.ingest.schemas import Block, ChunkType, ParsedDocument
+from app.ingestion.parsing.cache import hash_file, load_cached, write_cache
+from app.ingestion.parsing.schemas import Block, ChunkType, ParsedDocument
 
 
 def parse_pdf(pdf_path: Path, cache_dir: Path) -> ParsedDocument:

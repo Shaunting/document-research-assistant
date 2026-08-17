@@ -1,4 +1,4 @@
-from app.ingest.schemas import Block, ChunkType, ParsedDocument
+from app.ingestion.parsing.schemas import Block, ChunkType, ParsedDocument
 
 
 def test_block_round_trips_through_json():
