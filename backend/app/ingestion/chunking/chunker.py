@@ -17,6 +17,11 @@ def _group_by_section(blocks: list[Block]) -> list[list[Block]]:
 
 
 def _split_by_sentence(text: str) -> list[str]:
+    # Best-effort split: paragraph splitting first, then sentence-boundary
+    # splitting as the only fallback. If no sentence boundary is found either,
+    # this returns the text unchanged, so a boundary-less oversized paragraph
+    # can still produce a chunk over max_tokens -- there is no further
+    # recursive (e.g. hard token-window) fallback beyond this.
     sentences = re.split(r"(?<=[.!?])\s+", text)
     return sentences if len(sentences) > 1 else [text]
 
@@ -71,18 +76,28 @@ def _budget_for_breadcrumb(section_path: str, config: ChunkingConfig) -> Chunkin
 
 
 def _pack_text_run(blocks: list[Block], config: ChunkingConfig) -> list[list[Block]]:
+    # _blocks_to_chunk joins a group's block texts with "\n\n", which costs
+    # extra tokens per boundary that a naive sum of per-block token counts
+    # doesn't account for. Charge that separator cost here too -- the same
+    # reasoning _budget_for_breadcrumb applies to the breadcrumb -- so the
+    # group sizes we decide on here still fit once actually joined.
+    sep_tokens = _count_tokens("\n\n", config)
     groups: list[list[Block]] = []
     current: list[Block] = []
     current_tokens = 0
 
     for block in blocks:
         block_tokens = _count_tokens(block.text, config)
-        if current and current_tokens + block_tokens > config.max_tokens:
+        # Joining this block onto a non-empty group costs an extra separator;
+        # starting a fresh group costs nothing extra.
+        added_tokens = block_tokens + sep_tokens if current else block_tokens
+        if current and current_tokens + added_tokens > config.max_tokens:
             groups.append(current)
             current = []
             current_tokens = 0
+            added_tokens = block_tokens  # first block of the new group: no separator
         current.append(block)
-        current_tokens += block_tokens
+        current_tokens += added_tokens
         if current_tokens >= config.target_tokens:
             groups.append(current)
             current = []

@@ -246,3 +246,29 @@ def test_breadcrumb_tokens_are_budgeted_into_max_tokens():
         assert c.token_count <= config.max_tokens
     all_text = " ".join(c.text for c in chunks)
     assert "Final check here." in all_text
+
+
+def test_join_separator_tokens_are_budgeted_into_max_tokens():
+    # Regression test: _pack_text_run sums each block's *individual* token
+    # count when deciding how much to pack into a group, but _blocks_to_chunk
+    # later joins the group's block texts with "\n\n", which costs extra
+    # tokens per boundary that packing never budgeted for. With many small
+    # blocks in one section (no breadcrumb -- section_path="" here, to
+    # isolate the separator cost from the already-fixed breadcrumb cost),
+    # packing greedily accumulates blocks until the raw per-block sum first
+    # reaches target_tokens (512), by which point 511 join separators have
+    # been introduced. Under the real default ChunkingConfig (target=512,
+    # max=800), without separator budgeting the resulting chunk's actual
+    # token_count comes out to 1023 (512 one-token words + 511 one-token
+    # separators), well over the 800-token cap.
+    config = ChunkingConfig()
+    blocks = [
+        _text_block("word", section_path="", page=1) for _ in range(512)
+    ]
+    parsed = ParsedDocument(markdown="", page_count=1, blocks=blocks)
+
+    chunks = chunk_document(parsed, config)
+
+    assert len(chunks) > 1
+    for c in chunks:
+        assert c.token_count <= config.max_tokens
