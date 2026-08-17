@@ -1,3 +1,4 @@
+from itertools import groupby
 from pathlib import Path
 
 import pytest
@@ -24,11 +25,13 @@ def test_chunk_sizes_stay_within_bounds(parsed_document):
         # Table chunks may legitimately exceed max_tokens (never split).
 
 
-def test_no_chunk_spans_two_sections(parsed_document):
+def test_chunk_section_sequence_matches_block_section_sequence(parsed_document):
     chunks = chunk_document(parsed_document)
-    block_section_paths = {b.section_path for b in parsed_document.blocks}
-    chunk_section_paths = {c.section_path for c in chunks}
-    assert chunk_section_paths <= block_section_paths
+    block_section_sequence = [
+        key for key, _ in groupby(b.section_path for b in parsed_document.blocks)
+    ]
+    chunk_section_sequence = [key for key, _ in groupby(c.section_path for c in chunks)]
+    assert chunk_section_sequence == block_section_sequence
 
 
 def test_table_chunks_are_never_merged_or_split(parsed_document):
