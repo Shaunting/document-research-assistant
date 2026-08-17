@@ -10,7 +10,7 @@ This is the FastAPI service for Document Copilot. Read [../AGENTS.md](../AGENTS.
 - `httpx` for outbound HTTP
 - `pytest` for tests
 - Supabase Python client (DB + auth)
-- SQLAlchemy models + Alembic migrations for database schema changes
+- SQLAlchemy models + Alembic migrations for database schema changes. Most request-path DB access goes through the Supabase client; backend/batch write paths that need a real atomic transaction (e.g. chunk persistence in `app/database/chunks.py`) use a direct SQLAlchemy `Session` instead.
 - OpenAI SDK for LLM & embeddings
 - Supabase `pgvector` for semantic search and Postgres full-text search for keyword retrieval. Hybrid search should run vector and full-text queries separately, then fuse ranked results in Python with Reciprocal Rank Fusion.
 - `structlog` for logging
@@ -42,7 +42,9 @@ backend/
 │   ├── retrieval/       # pgvector/full-text queries, RRF fusion, source passage lookup
 │   ├── grounding/       # citation validation and answer grounding checks
 │   ├── database/        # SQLAlchemy models, Supabase client wrapper, typed query helpers
-│   ├── ingest/          # PDF parsing (Docling), chunking, embedding — lives in app/ so it's reachable from a future upload endpoint, not just offline scripts
+│   ├── ingestion/
+│   │   ├── parsing/     # PDF parsing (Docling) — lives in app/ so it's reachable from a future upload endpoint, not just offline scripts
+│   │   └── chunking/    # blocks into sized, section-aware chunks; embedding lives elsewhere
 │   └── prompts/         # prompt/instruction templates if not colocated with assistant
 ├── tests/
 └── pyproject.toml

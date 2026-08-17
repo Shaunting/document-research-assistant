@@ -56,6 +56,6 @@ def test_every_chunk_has_a_valid_page_range(parsed_document):
 
 def test_produces_a_reasonable_number_of_chunks(parsed_document):
     chunks = chunk_document(parsed_document)
-    # A ~40-page paper normalizes to ~80-100 blocks pre-chunking (per ingest.md);
+    # A ~40-page paper normalizes to ~80-100 blocks pre-chunking (per parsing.md);
     # packing into ~512-token windows should land in the same order of magnitude.
     assert 0 < len(chunks) <= len(parsed_document.blocks) * 2

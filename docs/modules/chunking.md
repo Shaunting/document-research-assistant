@@ -1,6 +1,6 @@
 # chunking
 
-`backend/app/ingestion/chunking/` — turns a parsed document's flat block list into sized, section-aware chunks ready for embedding, and persists them to `document_chunks`. This is step two of the pipeline: it takes parsing's output as its only input and doesn't touch embeddings or search itself.
+`backend/app/ingestion/chunking/` — turns a parsed document's flat block list into sized, section-aware chunks ready for embedding. This is step two of the pipeline: it takes parsing's output as its only input and doesn't touch embeddings or search itself. Two distinct steps live here: `chunk_document()` produces the chunks, and a separate function, `replace_document_chunks()`, persists them to `document_chunks`.
 
 ## The process, end to end
 
@@ -45,7 +45,7 @@ There's no per-chunk staleness tracking (no content-hash/config-version column).
 - **chunker.py** — `chunk_document(parsed, config)` is the public entry point (steps 1-6 above).
 - **schemas.py** — `ChunkingConfig` (target/max token size, tokenizer, config version) and `Chunk` (the pre-persistence shape).
 - **`app/database/chunks.py`** — `replace_document_chunks(session, document_id, chunks)`, the persistence half, kept separate so `chunk_document()` itself has no I/O and stays trivially unit-testable.
-- **`app/database/engine.py`** — `get_engine()`, the plain SQLAlchemy engine/session factory this and the schema-constraint tests share.
+- **`app/database/engine.py`** — `get_engine()`, the plain SQLAlchemy engine factory this and the schema-constraint tests share.
 
 ## Where the output lives
 

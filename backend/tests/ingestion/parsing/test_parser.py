@@ -1,4 +1,4 @@
-# backend/tests/ingest/test_parser.py
+# backend/tests/ingestion/parsing/test_parser.py
 """Integration/smoke tests for normalize().
 
 These are deliberately not isolated unit tests: constructing a valid

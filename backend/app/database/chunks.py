@@ -25,6 +25,13 @@ def _to_orm(document_id: uuid.UUID, chunk: Chunk) -> DocumentChunk:
 def replace_document_chunks(
     session: Session, document_id: uuid.UUID, chunks: list[Chunk]
 ) -> None:
+    """Delete all existing chunks for `document_id` and insert `chunks` in their place, atomically.
+
+    Note: passing an empty `chunks` list deletes all existing chunks for
+    `document_id` without inserting replacements -- call sites should guard
+    against this if that's not intended (`chunk_document()` itself raises on
+    empty input, but this function is independently callable and does not).
+    """
     # Note: we deliberately avoid `with session.begin():` here. SQLAlchemy's
     # Session autobegins a transaction on first use (e.g. simply resolving an
     # expired attribute like `document_id` before this function is even

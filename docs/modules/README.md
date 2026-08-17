@@ -23,7 +23,7 @@ A good module doc covers, roughly in this order:
 Other guidelines:
 - Use a real example pulled from actual data/output where possible, not a hypothetical one — it's more trustworthy and more concrete.
 - Keep it brief. If a section would just restate the code line-by-line, cut it — this doc is for the "why/what", not a code walkthrough.
-- One file per module, named after the module (e.g. `ingest.md` for `app/ingest/`). Add an index line above when you add one.
+- One file per module, named after the module (e.g. `parsing.md` for `app/ingestion/parsing/`). Add an index line above when you add one.
 - When a module changes meaningfully, update its doc in the same pass — stale docs are worse than no docs.
 
-[ingest.md](ingest.md) is the reference example to follow.
+[parsing.md](parsing.md) is the reference example to follow.
