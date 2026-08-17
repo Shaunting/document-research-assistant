@@ -1,4 +1,4 @@
-# ingest
+# parsing
 
 `backend/app/ingestion/parsing/` — turns a PDF into a structured JSON file describing its content, page by page and section by section. This is step one of the pipeline: nothing here does chunking, embedding, or search — it just turns a messy PDF into clean, labeled data that later steps can work with.
 

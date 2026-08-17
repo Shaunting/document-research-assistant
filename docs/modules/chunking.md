@@ -7,8 +7,8 @@
 1. **Group blocks by section.** Walk `parsed.blocks` in original order and split them into runs wherever `section_path` changes. A run never gets recombined with another later in the document.
 2. **Handle tables immediately.** Any table block becomes its own chunk on the spot — never merged with surrounding text, never split, even if it's larger than the target size.
 3. **Split oversized text blocks.** A single block bigger than the max size gets broken on its own paragraph breaks first, falling back to sentence splitting only if one paragraph alone is still too big.
-4. **Pack text blocks greedily.** Within a run, blocks accumulate into a chunk until adding the next one would push it over the max size, then a new chunk starts. A long section naturally becomes several chunks this way.
-5. **Prepend the section breadcrumb.** Each chunk's final text is `"{section_path}\n\n{content}"`, so the section a chunk came from is baked into what gets embedded and searched — except for pre-heading content (`section_path == ""`), which is left as-is.
+4. **Pack text blocks greedily.** Within a run, blocks accumulate into a chunk until the running total reaches the target size (default 512 tokens) — that's the common stopping point. If a single next block would push the total past the hard max (default 800 tokens) before the target is reached, the chunk closes there instead. A long section naturally becomes several chunks this way.
+5. **Prepend the section breadcrumb — text chunks only.** Each text chunk's final text is `"{section_path}\n\n{content}"`, so the section a chunk came from is baked into what gets embedded and searched — except for pre-heading content (`section_path == ""`), which is left as-is with no breadcrumb line. Table chunks never get a breadcrumb at all; they keep the table's raw markdown exactly as extracted, regardless of section.
 6. **Assign indexes and persist.** Chunks get a sequential `chunk_index` across the whole document, then `replace_document_chunks()` deletes any existing chunks for that document and inserts the fresh set, in one transaction.
 
 ## What a chunk looks like
