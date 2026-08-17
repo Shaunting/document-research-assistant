@@ -53,6 +53,23 @@ def _split_oversized_block(block: Block, config: ChunkingConfig) -> list[Block]:
     ]
 
 
+def _breadcrumb_tokens(section_path: str, config: ChunkingConfig) -> int:
+    if not section_path:
+        return 0
+    return _count_tokens(f"{section_path}\n\n", config)
+
+
+def _budget_for_breadcrumb(section_path: str, config: ChunkingConfig) -> ChunkingConfig:
+    """Return a config whose max_tokens is reduced by the breadcrumb's token
+    cost, so packing/splitting decisions leave enough headroom that adding
+    the breadcrumb afterward (in _blocks_to_chunk) never pushes the final
+    chunk text over the real config.max_tokens."""
+    reserved = _breadcrumb_tokens(section_path, config)
+    if reserved <= 0:
+        return config
+    return config.model_copy(update={"max_tokens": max(config.max_tokens - reserved, 1)})
+
+
 def _pack_text_run(blocks: list[Block], config: ChunkingConfig) -> list[list[Block]]:
     groups: list[list[Block]] = []
     current: list[Block] = []
@@ -100,11 +117,18 @@ def chunk_document(parsed: ParsedDocument, config: ChunkingConfig = ChunkingConf
 
     chunks: list[Chunk] = []
     for run in _group_by_section(parsed.blocks):
+        section_path = run[0].section_path
+        # Text chunks in this run get section_path prepended as a breadcrumb
+        # in _blocks_to_chunk, after packing/splitting decisions are made.
+        # Reserve that breadcrumb's token cost from the cap used for those
+        # decisions so the post-breadcrumb chunk never exceeds max_tokens.
+        pack_config = _budget_for_breadcrumb(section_path, config)
+
         text_blocks: list[Block] = []
         for block in run:
             if block.block_type == ChunkType.TABLE:
                 if text_blocks:
-                    for group in _pack_text_run(text_blocks, config):
+                    for group in _pack_text_run(text_blocks, pack_config):
                         chunks.append(_blocks_to_chunk(group, config))
                     text_blocks = []
                 chunks.append(
@@ -120,9 +144,9 @@ def chunk_document(parsed: ParsedDocument, config: ChunkingConfig = ChunkingConf
                     )
                 )
             else:
-                text_blocks.extend(_split_oversized_block(block, config))
+                text_blocks.extend(_split_oversized_block(block, pack_config))
         if text_blocks:
-            for group in _pack_text_run(text_blocks, config):
+            for group in _pack_text_run(text_blocks, pack_config):
                 chunks.append(_blocks_to_chunk(group, config))
 
     for index, chunk in enumerate(chunks):

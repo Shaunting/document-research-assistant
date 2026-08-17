@@ -221,3 +221,28 @@ def test_chunk_page_range_is_min_max_across_packed_blocks():
     assert len(chunks) == 1
     assert chunks[0].page_start == 3
     assert chunks[0].page_end == 4
+
+
+def test_breadcrumb_tokens_are_budgeted_into_max_tokens():
+    # Regression test: a long section_path breadcrumb (prepended only in
+    # _blocks_to_chunk, after packing/splitting decisions) must not be able
+    # to push a chunk's final token_count over config.max_tokens. This
+    # reproduces the reviewer's repro: a single text block whose raw token
+    # count (59) is under max_tokens=60 -- so, without breadcrumb budgeting,
+    # _split_oversized_block leaves it untouched and the resulting chunk's
+    # token_count (raw block + 17-token breadcrumb) comes out to 76, over
+    # the 60-token cap.
+    config = ChunkingConfig(target_tokens=50, max_tokens=60)
+    section_path = "Chapter 4: Experimental Results and Ablation Studies on Model Robustness"
+    sentence = "The model shows strong robustness across diverse evaluation settings."
+    body = " ".join([sentence] * 5) + " Final check here."
+    long_block = _text_block(body, section_path=section_path)
+    parsed = ParsedDocument(markdown="", page_count=1, blocks=[long_block])
+
+    chunks = chunk_document(parsed, config)
+
+    assert len(chunks) > 1
+    for c in chunks:
+        assert c.token_count <= config.max_tokens
+    all_text = " ".join(c.text for c in chunks)
+    assert "Final check here." in all_text
