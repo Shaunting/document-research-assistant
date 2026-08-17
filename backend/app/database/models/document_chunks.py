@@ -49,7 +49,11 @@ class DocumentChunk(TimestampMixin, Base):
     page_end: Mapped[int] = mapped_column(Integer, nullable=False)
     section_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     chunk_type: Mapped[ChunkType] = mapped_column(
-        SAEnum(ChunkType, name="chunk_type"),
+        SAEnum(
+            ChunkType,
+            name="chunk_type",
+            values_callable=lambda enum: [member.value for member in enum],
+        ),
         nullable=False,
         default=ChunkType.TEXT,
         server_default=ChunkType.TEXT.value,
