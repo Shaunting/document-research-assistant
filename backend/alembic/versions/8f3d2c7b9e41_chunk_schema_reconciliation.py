@@ -62,8 +62,31 @@ def upgrade() -> None:
         ondelete="CASCADE",
     )
 
+    op.drop_constraint(
+        "message_citations_chunk_id_fkey", "message_citations", type_="foreignkey"
+    )
+    op.create_foreign_key(
+        "message_citations_chunk_id_fkey",
+        "message_citations",
+        "document_chunks",
+        ["chunk_id"],
+        ["id"],
+        ondelete="CASCADE",
+    )
+
 
 def downgrade() -> None:
+    op.drop_constraint(
+        "message_citations_chunk_id_fkey", "message_citations", type_="foreignkey"
+    )
+    op.create_foreign_key(
+        "message_citations_chunk_id_fkey",
+        "message_citations",
+        "document_chunks",
+        ["chunk_id"],
+        ["id"],
+    )
+
     op.drop_constraint(
         "document_chunks_document_id_fkey", "document_chunks", type_="foreignkey"
     )
