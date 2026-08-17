@@ -40,7 +40,7 @@ def test_source_document_columns():
     cols = {c.key for c in sa_inspect(SourceDocument).mapper.column_attrs}
     expected = {
         "id", "title", "authors", "year", "filename", "source_path",
-        "content_markdown", "content_hash", "tags",
+        "content_markdown", "content_hash", "page_count", "tags",
         "created_at", "updated_at",
     }
     assert cols == expected
@@ -52,6 +52,19 @@ def test_source_document_filename_is_unique():
         c.name for c in SourceDocument.__table__.constraints if c.name
     }
     assert "source_documents_filename_key" in constraints
+
+
+def test_source_document_content_hash_not_nullable():
+    from app.database.models.source_documents import SourceDocument
+    assert SourceDocument.__table__.c["content_hash"].nullable is False
+
+
+def test_source_document_content_hash_is_unique():
+    from app.database.models.source_documents import SourceDocument
+    constraints = {
+        c.name for c in SourceDocument.__table__.constraints if c.name
+    }
+    assert "source_documents_content_hash_key" in constraints
 
 
 def test_source_document_id_has_default():
@@ -89,6 +102,57 @@ def test_document_chunk_fk_to_source_documents():
         for fk in DocumentChunk.__table__.c["document_id"].foreign_keys
     }
     assert "source_documents" in fk_tables
+
+
+def test_document_chunk_columns():
+    from app.database.models.document_chunks import DocumentChunk
+    cols = {c.key for c in sa_inspect(DocumentChunk).mapper.column_attrs}
+    expected = {
+        "id", "document_id", "chunk_index", "text", "token_count",
+        "page_start", "page_end", "section_path", "chunk_type",
+        "embedding", "search_vector", "metadata_",
+        "created_at", "updated_at",
+    }
+    assert cols == expected
+
+
+def test_document_chunk_chunk_type_defaults_to_text():
+    from app.database.models.document_chunks import ChunkType, DocumentChunk
+    assert DocumentChunk.__table__.c["chunk_type"].default.arg == ChunkType.TEXT
+
+
+def test_document_chunk_chunk_type_persists_lowercase_values():
+    from app.database.models.document_chunks import DocumentChunk
+    assert list(DocumentChunk.__table__.c["chunk_type"].type.enums) == ["text", "table"]
+
+
+def test_document_chunk_page_start_and_page_end_not_nullable():
+    from app.database.models.document_chunks import DocumentChunk
+    assert DocumentChunk.__table__.c["page_start"].nullable is False
+    assert DocumentChunk.__table__.c["page_end"].nullable is False
+
+
+def test_document_chunk_section_path_nullable():
+    from app.database.models.document_chunks import DocumentChunk
+    assert DocumentChunk.__table__.c["section_path"].nullable is True
+
+
+def test_document_chunk_document_index_unique_constraint():
+    from app.database.models.document_chunks import DocumentChunk
+    constraints = {c.name for c in DocumentChunk.__table__.constraints if c.name}
+    assert "document_chunks_document_index_unique" in constraints
+
+
+def test_document_chunk_page_range_check_constraint():
+    from app.database.models.document_chunks import DocumentChunk
+    constraints = {c.name for c in DocumentChunk.__table__.constraints if c.name}
+    assert "document_chunks_page_range_valid" in constraints
+
+
+def test_document_chunk_fk_ondelete_cascade():
+    from app.database.models.document_chunks import DocumentChunk
+    (fk,) = DocumentChunk.__table__.c["document_id"].foreign_keys
+    assert fk.ondelete == "CASCADE"
 
 
 def test_chat_thread_table_name():
@@ -156,6 +220,12 @@ def test_message_citation_fk_to_document_chunks():
         for fk in MessageCitation.__table__.c["chunk_id"].foreign_keys
     }
     assert "document_chunks" in fk_tables
+
+
+def test_message_citation_fk_ondelete_cascade():
+    from app.database.models.message_citations import MessageCitation
+    (fk,) = MessageCitation.__table__.c["chunk_id"].foreign_keys
+    assert fk.ondelete == "CASCADE"
 
 
 def test_package_exports_all_models():
