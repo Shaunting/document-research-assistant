@@ -1,4 +1,5 @@
 import uuid
+from pathlib import Path
 
 import pytest
 from sqlalchemy import select
@@ -9,10 +10,15 @@ from app.database.engine import get_engine
 from app.database.models.document_chunks import ChunkType as OrmChunkType
 from app.database.models.document_chunks import DocumentChunk
 from app.database.models.source_documents import SourceDocument
+from app.ingestion.chunking.chunker import chunk_document
 from app.ingestion.chunking.schemas import Chunk
-from app.ingestion.parsing.schemas import ChunkType
+from app.ingestion.parsing.schemas import ChunkType, ParsedDocument
 
 pytestmark = pytest.mark.integration
+
+FIXTURE_PATH = sorted(
+    (Path(__file__).parents[3] / "data" / "papers" / "parsed").glob("*.json")
+)[0]
 
 
 @pytest.fixture
@@ -122,6 +128,37 @@ def test_persisted_chunk_type_matches_orm_enum(db_session):
         select(DocumentChunk).where(DocumentChunk.document_id == doc.id)
     ).one()
     assert row.chunk_type == OrmChunkType.TEXT
+
+    db_session.delete(doc)
+    db_session.commit()
+
+
+def test_real_chunk_document_output_round_trips_through_replace_document_chunks(db_session):
+    # Closes the seam between chunk_document() and replace_document_chunks():
+    # both are tested in isolation elsewhere, but nothing exercises real
+    # chunker output flowing through persistence, so a future Chunk field
+    # addition, an oversized section_path, or enum-value drift wouldn't be
+    # caught by either test file alone.
+    parsed = ParsedDocument.model_validate_json(FIXTURE_PATH.read_text())
+    chunks = chunk_document(parsed)
+    doc = _new_source_document()
+    db_session.add(doc)
+    db_session.commit()
+
+    replace_document_chunks(db_session, doc.id, chunks)
+
+    rows = db_session.scalars(
+        select(DocumentChunk)
+        .where(DocumentChunk.document_id == doc.id)
+        .order_by(DocumentChunk.chunk_index)
+    ).all()
+    assert len(rows) == len(chunks)
+    assert rows[0].text == chunks[0].text
+    assert rows[0].token_count == chunks[0].token_count
+    assert rows[0].chunk_type == OrmChunkType(chunks[0].chunk_type.value)
+    assert rows[-1].text == chunks[-1].text
+    assert rows[-1].token_count == chunks[-1].token_count
+    assert rows[-1].chunk_type == OrmChunkType(chunks[-1].chunk_type.value)
 
     db_session.delete(doc)
     db_session.commit()
