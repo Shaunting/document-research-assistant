@@ -40,7 +40,7 @@ def test_source_document_columns():
     cols = {c.key for c in sa_inspect(SourceDocument).mapper.column_attrs}
     expected = {
         "id", "title", "authors", "year", "filename", "source_path",
-        "content_markdown", "content_hash", "tags",
+        "content_markdown", "content_hash", "page_count", "tags",
         "created_at", "updated_at",
     }
     assert cols == expected
@@ -52,6 +52,19 @@ def test_source_document_filename_is_unique():
         c.name for c in SourceDocument.__table__.constraints if c.name
     }
     assert "source_documents_filename_key" in constraints
+
+
+def test_source_document_content_hash_not_nullable():
+    from app.database.models.source_documents import SourceDocument
+    assert SourceDocument.__table__.c["content_hash"].nullable is False
+
+
+def test_source_document_content_hash_is_unique():
+    from app.database.models.source_documents import SourceDocument
+    constraints = {
+        c.name for c in SourceDocument.__table__.constraints if c.name
+    }
+    assert "source_documents_content_hash_key" in constraints
 
 
 def test_source_document_id_has_default():

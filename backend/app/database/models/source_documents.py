@@ -9,7 +9,10 @@ from app.database.models.base import Base, TimestampMixin
 
 class SourceDocument(TimestampMixin, Base):
     __tablename__ = "source_documents"
-    __table_args__ = (UniqueConstraint("filename", name="source_documents_filename_key"),)
+    __table_args__ = (
+        UniqueConstraint("filename", name="source_documents_filename_key"),
+        UniqueConstraint("content_hash", name="source_documents_content_hash_key"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -20,5 +23,6 @@ class SourceDocument(TimestampMixin, Base):
     filename: Mapped[str] = mapped_column(String, nullable=False)
     source_path: Mapped[str] = mapped_column(Text, nullable=False)
     content_markdown: Mapped[str] = mapped_column(Text, nullable=False)
-    content_hash: Mapped[str | None] = mapped_column(String, nullable=True)
+    content_hash: Mapped[str] = mapped_column(String, nullable=False)
+    page_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     tags: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
