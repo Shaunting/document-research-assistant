@@ -8,8 +8,8 @@
 2. **Handle tables immediately.** Any table block becomes its own chunk on the spot — never merged with surrounding text, never split, even if it's larger than the target size.
 3. **Split oversized text blocks.** A single block bigger than the max size gets broken on its own paragraph breaks first, falling back to sentence splitting only if one paragraph alone is still too big.
 4. **Pack text blocks greedily.** Within a run, blocks accumulate into a chunk until the running total reaches the target size (default 512 tokens) — that's the common stopping point. If a single next block would push the total past the hard max (default 800 tokens) before the target is reached, the chunk closes there instead. A long section naturally becomes several chunks this way.
-5. **Prepend the section breadcrumb — text chunks only.** Each text chunk's final text is `"{section_path}\n\n{content}"`, so the section a chunk came from is baked into what gets embedded and searched — except for pre-heading content (`section_path == ""`), which is left as-is with no breadcrumb line. Table chunks never get a breadcrumb at all; they keep the table's raw markdown exactly as extracted, regardless of section.
-6. **Assign indexes and persist.** Chunks get a sequential `chunk_index` across the whole document, then `replace_document_chunks()` deletes any existing chunks for that document and inserts the fresh set, in one transaction.
+5. **Prepend the section breadcrumb.** Every chunk's final text is `"{section_path}\n\n{content}"`, so the section a chunk came from is baked into what gets embedded and searched — except for pre-heading content (`section_path == ""`), which is left as-is with no breadcrumb line. Tables get the same prefix; they stay whole and unsplit, they just aren't exempt from the breadcrumb.
+6. **Assign indexes.** Chunks get a sequential `chunk_index` across the whole document. Persistence is a separate function (`replace_document_chunks()`), not part of `chunk_document()`.
 
 ## What a chunk looks like
 
@@ -42,7 +42,7 @@ There's no per-chunk staleness tracking (no content-hash/config-version column).
 
 ## Files
 
-- **chunker.py** — `chunk_document(parsed, config)` is the public entry point (steps 1-6 above).
+- **chunker.py** — `chunk_document(parsed, config)` is the public entry point (steps 1-5 above).
 - **schemas.py** — `ChunkingConfig` (target/max token size, tokenizer, config version) and `Chunk` (the pre-persistence shape).
 - **`app/database/chunks.py`** — `replace_document_chunks(session, document_id, chunks)`, the persistence half, kept separate so `chunk_document()` itself has no I/O and stays trivially unit-testable.
 - **`app/database/engine.py`** — `get_engine()`, the plain SQLAlchemy engine factory this and the schema-constraint tests share.

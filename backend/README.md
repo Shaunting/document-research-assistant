@@ -24,7 +24,10 @@ Alternative: `uv run python app/main.py`
 
 ## Tests & lint
 
+Parsing and chunking unit tests import `tiktoken` (and some parsing tests import Docling). Install the extra before running the fast suite:
+
 ```bash
+uv sync --extra ingestion
 uv run pytest -m "not integration"
 uv run ruff check .
 ```

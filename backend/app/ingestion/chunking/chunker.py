@@ -7,6 +7,45 @@ from app.ingestion.chunking.schemas import Chunk, ChunkingConfig
 from app.ingestion.parsing.schemas import Block, ChunkType, ParsedDocument
 
 
+def chunk_document(parsed: ParsedDocument, config: ChunkingConfig = ChunkingConfig()) -> list[Chunk]:
+    if not parsed.blocks:
+        raise ValueError("cannot chunk a document with no blocks")
+
+    chunks: list[Chunk] = []
+    for run in _group_by_section(parsed.blocks):
+        section_path = run[0].section_path
+        # Every chunk in this run gets section_path prepended as a breadcrumb
+        # in _blocks_to_chunk, after packing/splitting decisions are made.
+        # Reserve that breadcrumb's token cost from the cap used for those
+        # decisions so the post-breadcrumb chunk never exceeds max_tokens.
+        pack_config = _budget_for_breadcrumb(section_path, config)
+
+        text_blocks: list[Block] = []
+        for block in run:
+            if block.block_type == ChunkType.TABLE:
+                _flush_text_blocks(chunks, text_blocks, pack_config, config)
+                text_blocks = []
+                chunks.append(_blocks_to_chunk([block], config, chunk_type=ChunkType.TABLE))
+            else:
+                text_blocks.extend(_split_oversized_block(block, pack_config))
+        _flush_text_blocks(chunks, text_blocks, pack_config, config)
+
+    for index, chunk in enumerate(chunks):
+        chunk.chunk_index = index
+
+    return chunks
+
+
+def _flush_text_blocks(
+    chunks: list[Chunk],
+    text_blocks: list[Block],
+    pack_config: ChunkingConfig,
+    config: ChunkingConfig,
+) -> None:
+    for group in _pack_text_run(text_blocks, pack_config):
+        chunks.append(_blocks_to_chunk(group, config))
+
+
 def _count_tokens(text: str, config: ChunkingConfig) -> int:
     encoding = tiktoken.get_encoding(config.tokenizer)
     return len(encoding.encode(text))
@@ -108,7 +147,11 @@ def _pack_text_run(blocks: list[Block], config: ChunkingConfig) -> list[list[Blo
     return groups
 
 
-def _blocks_to_chunk(blocks: list[Block], config: ChunkingConfig) -> Chunk:
+def _blocks_to_chunk(
+    blocks: list[Block],
+    config: ChunkingConfig,
+    chunk_type: ChunkType = ChunkType.TEXT,
+) -> Chunk:
     content = "\n\n".join(b.text for b in blocks)
     section_path = blocks[0].section_path
     text = f"{section_path}\n\n{content}" if section_path else content
@@ -121,50 +164,6 @@ def _blocks_to_chunk(blocks: list[Block], config: ChunkingConfig) -> Chunk:
         page_start=page_start,
         page_end=page_end,
         section_path=section_path,
-        chunk_type=ChunkType.TEXT,
+        chunk_type=chunk_type,
         metadata={"chunking_config_version": config.version},
     )
-
-
-def chunk_document(parsed: ParsedDocument, config: ChunkingConfig = ChunkingConfig()) -> list[Chunk]:
-    if not parsed.blocks:
-        raise ValueError("cannot chunk a document with no blocks")
-
-    chunks: list[Chunk] = []
-    for run in _group_by_section(parsed.blocks):
-        section_path = run[0].section_path
-        # Text chunks in this run get section_path prepended as a breadcrumb
-        # in _blocks_to_chunk, after packing/splitting decisions are made.
-        # Reserve that breadcrumb's token cost from the cap used for those
-        # decisions so the post-breadcrumb chunk never exceeds max_tokens.
-        pack_config = _budget_for_breadcrumb(section_path, config)
-
-        text_blocks: list[Block] = []
-        for block in run:
-            if block.block_type == ChunkType.TABLE:
-                if text_blocks:
-                    for group in _pack_text_run(text_blocks, pack_config):
-                        chunks.append(_blocks_to_chunk(group, config))
-                    text_blocks = []
-                chunks.append(
-                    Chunk(
-                        chunk_index=0,
-                        text=block.text,
-                        token_count=_count_tokens(block.text, config),
-                        page_start=block.page_start,
-                        page_end=block.page_end,
-                        section_path=block.section_path,
-                        chunk_type=ChunkType.TABLE,
-                        metadata={"chunking_config_version": config.version},
-                    )
-                )
-            else:
-                text_blocks.extend(_split_oversized_block(block, pack_config))
-        if text_blocks:
-            for group in _pack_text_run(text_blocks, pack_config):
-                chunks.append(_blocks_to_chunk(group, config))
-
-    for index, chunk in enumerate(chunks):
-        chunk.chunk_index = index
-
-    return chunks

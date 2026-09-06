@@ -85,6 +85,16 @@ Then notebooks can import backend modules:
 from app.config import settings
 ```
 
+## Tests
+
+Parsing and chunking unit tests need the `ingestion` extra (`tiktoken`, Docling):
+
+```bash
+cd backend
+uv sync --extra ingestion
+uv run pytest -m "not integration"
+```
+
 ## Sample SEC data
 
 From the repo root (stdlib-only script, no backend env needed):

@@ -63,6 +63,7 @@ def test_table_block_becomes_its_own_chunk():
     assert chunks[0].chunk_type == ChunkType.TABLE
     assert chunks[0].page_start == 4
     assert chunks[0].page_end == 4
+    assert chunks[0].text == "Results\n\n| a | b |\n| - | - |"
 
 
 def test_table_never_merges_with_surrounding_text():
@@ -79,6 +80,7 @@ def test_table_never_merges_with_surrounding_text():
     types = [c.chunk_type for c in chunks]
     assert ChunkType.TABLE in types
     table_chunk = next(c for c in chunks if c.chunk_type == ChunkType.TABLE)
+    assert table_chunk.text == "Results\n\n| a | b |"
     assert "before" not in table_chunk.text
     assert "after" not in table_chunk.text
 
@@ -182,6 +184,17 @@ def test_breadcrumb_is_prepended_when_section_path_present():
     )
     chunks = chunk_document(parsed)
     assert chunks[0].text == "Methods\n\nbody text"
+
+
+def test_table_chunk_gets_the_same_breadcrumb():
+    parsed = ParsedDocument(
+        markdown="",
+        page_count=1,
+        blocks=[_table_block("| a | b |", section_path="Results", page=1)],
+    )
+    chunks = chunk_document(parsed)
+    assert chunks[0].text == "Results\n\n| a | b |"
+    assert chunks[0].token_count == _count_tokens(chunks[0].text, ChunkingConfig())
 
 
 def test_no_breadcrumb_line_when_section_path_is_empty():

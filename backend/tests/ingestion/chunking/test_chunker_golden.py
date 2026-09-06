@@ -34,13 +34,25 @@ def test_chunk_section_sequence_matches_block_section_sequence(parsed_document):
     assert chunk_section_sequence == block_section_sequence
 
 
+def _table_content(chunk) -> str:
+    prefix = f"{chunk.section_path}\n\n"
+    if chunk.section_path and chunk.text.startswith(prefix):
+        return chunk.text.removeprefix(prefix)
+    return chunk.text
+
+
 def test_table_chunks_are_never_merged_or_split(parsed_document):
-    original_table_texts = {
+    original_table_texts = [
         b.text for b in parsed_document.blocks if b.block_type == ChunkType.TABLE
-    }
+    ]
     chunks = chunk_document(parsed_document)
-    chunk_table_texts = {c.text for c in chunks if c.chunk_type == ChunkType.TABLE}
-    assert chunk_table_texts == original_table_texts
+    table_chunks = [c for c in chunks if c.chunk_type == ChunkType.TABLE]
+    assert [_table_content(c) for c in table_chunks] == original_table_texts
+    for chunk, original in zip(table_chunks, original_table_texts, strict=True):
+        if chunk.section_path:
+            assert chunk.text == f"{chunk.section_path}\n\n{original}"
+        else:
+            assert chunk.text == original
 
 
 def test_chunk_index_is_sequential(parsed_document):

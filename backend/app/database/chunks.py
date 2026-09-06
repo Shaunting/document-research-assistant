@@ -8,20 +8,6 @@ from app.database.models.document_chunks import DocumentChunk
 from app.ingestion.chunking.schemas import Chunk
 
 
-def _to_orm(document_id: uuid.UUID, chunk: Chunk) -> DocumentChunk:
-    return DocumentChunk(
-        document_id=document_id,
-        chunk_index=chunk.chunk_index,
-        text=chunk.text,
-        token_count=chunk.token_count,
-        page_start=chunk.page_start,
-        page_end=chunk.page_end,
-        section_path=chunk.section_path,
-        chunk_type=OrmChunkType(chunk.chunk_type.value),
-        metadata_=chunk.metadata,
-    )
-
-
 def replace_document_chunks(
     session: Session, document_id: uuid.UUID, chunks: list[Chunk]
 ) -> None:
@@ -50,3 +36,17 @@ def replace_document_chunks(
     except Exception:
         session.rollback()
         raise
+
+
+def _to_orm(document_id: uuid.UUID, chunk: Chunk) -> DocumentChunk:
+    return DocumentChunk(
+        document_id=document_id,
+        chunk_index=chunk.chunk_index,
+        text=chunk.text,
+        token_count=chunk.token_count,
+        page_start=chunk.page_start,
+        page_end=chunk.page_end,
+        section_path=chunk.section_path,
+        chunk_type=OrmChunkType(chunk.chunk_type.value),
+        metadata_=chunk.metadata,
+    )
