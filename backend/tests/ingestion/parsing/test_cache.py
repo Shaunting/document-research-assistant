@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from app.ingest.cache import hash_file, load_cached, write_cache
-from app.ingest.schemas import Block, ChunkType, ParsedDocument
+from app.ingestion.parsing.cache import hash_file, load_cached, write_cache
+from app.ingestion.parsing.schemas import Block, ChunkType, ParsedDocument
 
 
 def _sample_doc() -> ParsedDocument:

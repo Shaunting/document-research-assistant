@@ -1,25 +1,19 @@
 import uuid
 
 import pytest
-from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.config import settings
+from app.database.engine import get_engine
 from app.database.models.document_chunks import ChunkType, DocumentChunk
 from app.database.models.source_documents import SourceDocument
 
 pytestmark = pytest.mark.integration
 
 
-def _engine():
-    db_url = settings.database_url.replace("postgresql://", "postgresql+psycopg://", 1)
-    return create_engine(db_url)
-
-
 @pytest.fixture
 def db_session():
-    engine = _engine()
+    engine = get_engine()
     session = Session(bind=engine)
     yield session
     session.rollback()

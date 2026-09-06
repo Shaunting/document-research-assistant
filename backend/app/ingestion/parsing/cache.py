@@ -1,7 +1,7 @@
 import hashlib
 from pathlib import Path
 
-from app.ingest.schemas import ParsedDocument
+from app.ingestion.parsing.schemas import ParsedDocument
 
 
 def hash_file(path: Path) -> str:

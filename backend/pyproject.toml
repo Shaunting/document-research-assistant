@@ -26,7 +26,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-ingest = ["docling==2.118.0", "docling-core==2.91.0"]
+ingestion = ["docling==2.118.0", "docling-core==2.91.0", "tiktoken==0.13.0"]
 
 [tool.uv]
 add-bounds = "exact"
